@@ -1,5 +1,6 @@
 #!/usr/bin/python
 import sys
+import os.path
 from commands import getoutput
 import time
 import signal
@@ -114,9 +115,6 @@ def change_macaddr(interfaces):
 
 
 def start_torphantom():
-
-
-
 	if TorrcCfgString in open(Torrc).read():
 	    print timelog()+" Torrc file already configured"
 	else:
@@ -137,8 +135,22 @@ def start_torphantom():
 	print bcolors.GREEN+"[done]"+bcolors.ENDC
 	print timelog()+" setting up iptables rules",
 
-	iptables_rules = """
-	NON_TOR="192.168.1.0/24 192.168.0.0/24"
+        WLA="192.168.1.0/24 192.168.0.0/24"  # whitelistarray
+        # reading /etc/torphantom_whitelist
+        if os.path.isfile('/etc/torphantom_whitelist'):  # check if file is there
+          file = open('/etc/torphantom_whitelist','r')   # if it is then read it
+          lines = file.readlines()
+          file.close()
+
+          for l in lines:                                # iterate over lines
+            line = l.strip()                             # remove spaces
+            if not line or line.startswith('#'): # ignore comments and empty lines
+              continue
+            else:
+              print timelog() + " adding " + line + " from whitelst to NON_TOR addresses."
+              WLA=WLA + " " + line               # add entry to list
+
+        iptables_rules = "NON_TOR=\"" + WLA + "\"\n" + """
 	TOR_UID=%s
 	TRANS_PORT="9040"
 	iptables -F
